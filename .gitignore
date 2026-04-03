@@ -1,0 +1,15 @@
+venv/
+.env
+__pycache__/
+*.pyc
+data/recordings/*
+data/transcripts/*
+
+# Keep empty folders
+!data/recordings/.gitkeep
+!data/transcripts/.gitkeep
+
+*.wav
+*.json
+*.swp
+*~

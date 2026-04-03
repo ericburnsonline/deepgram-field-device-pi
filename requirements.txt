@@ -1,0 +1,4 @@
+gpiozero
+requests
+python-dotenv
+flask
