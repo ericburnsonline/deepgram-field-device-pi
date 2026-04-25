@@ -12,82 +12,21 @@ HTML = """
     <meta charset="utf-8">
     <title>Field Notes Device</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 2rem;
-            max-width: 1000px;
-        }
-        .page-meta {
-            color: #666;
-            margin-bottom: 1rem;
-        }
-        .note {
-            border: 1px solid #ccc;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 8px;
-        }
-        .note-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-        .note-main {
-            flex: 1;
-            min-width: 0;
-        }
-        .meta {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-        .transcript-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .transcript-actions {
-            flex-shrink: 0;
-        }
-        .transcript-text {
-            flex: 1;
-            min-width: 0;
-        }
-        .audio-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-top: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .audio-actions {
-            flex-shrink: 0;
-        }
-        .details,
-        .deep-dive {
-            display: none;
-            margin-top: 0.75rem;
-            padding: 0.75rem;
-            background: #f7f7f7;
-            border-radius: 6px;
-        }
-        .deep-dive pre {
-            margin: 0;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 0.85rem;
-            overflow-x: auto;
-        }
-        .button-row {
-            display: flex;
-            gap: 0.5rem;
-            align-items: flex-start;
-            flex-shrink: 0;
-        }
-        button,
-        .download-btn {
+        body { font-family: Arial, sans-serif; margin: 2rem; max-width: 1000px; }
+        .page-meta { color: #666; margin-bottom: 1rem; }
+        .note { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .note-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .note-main { flex: 1; min-width: 0; }
+        .meta { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .transcript-row { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .transcript-actions { flex-shrink: 0; }
+        .transcript-text { flex: 1; min-width: 0; }
+        .audio-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .details, .deep-dive { display: none; margin-top: 0.75rem; padding: 0.75rem; background: #f7f7f7; border-radius: 6px; }
+        .deep-dive pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem; overflow-x: auto; }
+        .button-row { display: flex; gap: 0.5rem; align-items: flex-start; flex-shrink: 0; }
+
+        button, .download-btn {
             padding: 0.4rem 0.8rem;
             cursor: pointer;
             flex-shrink: 0;
@@ -99,42 +38,43 @@ HTML = """
             color: #222;
             display: inline-block;
         }
-        button:hover,
-        .download-btn:hover {
-            background: #ececec;
-        }
+
+        button:hover, .download-btn:hover { background: #ececec; }
+
         pre.transcript {
             white-space: pre-wrap;
             word-wrap: break-word;
             margin: 0;
+            line-height: 1.6;
         }
-        .badge {
-            padding: 0.15rem 0.45rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
+
+        .word-confidence {
+            padding: 0.05rem 0.12rem;
+            border-radius: 4px;
+        }
+
+        .confidence-high {
+            background: transparent;
+        }
+
+        .confidence-medium {
+            background: #fff4d6;
+        }
+
+        .confidence-low {
+            background: #fde2e2;
             font-weight: bold;
         }
+
+        .badge { padding: 0.15rem 0.45rem; border-radius: 999px; font-size: 0.8rem; font-weight: bold; }
         .high { background: #dff5e1; color: #1f6b2a; }
         .medium { background: #fff4d6; color: #8a6700; }
         .low { background: #fde2e2; color: #9b1c1c; }
         .unknown { background: #ececec; color: #555; }
-        .copy-status {
-            font-size: 0.9rem;
-            color: #2f6f44;
-            margin-top: 0.35rem;
-        }
-        .sr-only {
-            position: absolute;
-            left: -9999px;
-            top: auto;
-            width: 1px;
-            height: 1px;
-            overflow: hidden;
-        }
-        .audio-duration {
-            color: #666;
-            font-size: 0.9rem;
-        }
+
+        .copy-status { font-size: 0.9rem; color: #2f6f44; margin-top: 0.35rem; }
+        .sr-only { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+        .audio-duration { color: #666; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -169,18 +109,41 @@ HTML = """
             return `${num.toFixed(2)} <span class="badge ${klass}">${label}</span>`;
         }
 
+        function wordConfidenceClass(confidence) {
+            if (confidence === null || confidence === undefined) return "confidence-high";
+            const num = Number(confidence);
+            if (num < 0.75) return "confidence-low";
+            if (num < 0.90) return "confidence-medium";
+            return "confidence-high";
+        }
+
+        function highlightedTranscript(note) {
+            try {
+                const words = note.deepgram_result.results.channels[0].alternatives[0].words;
+                if (!words || words.length === 0) {
+                    return `<pre class="transcript">${escapeHtml(note.transcript || "")}</pre>`;
+                }
+
+                const html = words.map(w => {
+                    const text = escapeHtml(w.punctuated_word || w.word || "");
+                    const klass = wordConfidenceClass(w.confidence);
+                    const score = w.confidence !== undefined ? Number(w.confidence).toFixed(3) : "unknown";
+                    return `<span class="word-confidence ${klass}" title="confidence: ${score}">${text}</span>`;
+                }).join(" ");
+
+                return `<pre class="transcript">${html}</pre>`;
+            } catch (err) {
+                return `<pre class="transcript">${escapeHtml(note.transcript || "")}</pre>`;
+            }
+        }
+
         function noteId(note, idx) {
             return (note.audio_filename || note.created_at || ("note-" + idx))
                 .replace(/[^A-Za-z0-9_.-]/g, "_");
         }
 
-        function detailsKey(id) {
-            return "details-" + id;
-        }
-
-        function deepDiveKey(id) {
-            return "deep-" + id;
-        }
+        function detailsKey(id) { return "details-" + id; }
+        function deepDiveKey(id) { return "deep-" + id; }
 
         function buildNotesSignature(notes) {
             return JSON.stringify(
@@ -241,16 +204,12 @@ HTML = """
 
                 status.textContent = "Copied!";
                 setTimeout(() => {
-                    if (status.textContent === "Copied!") {
-                        status.textContent = "";
-                    }
+                    if (status.textContent === "Copied!") status.textContent = "";
                 }, 1500);
             } catch (err) {
                 status.textContent = "Copy failed";
                 setTimeout(() => {
-                    if (status.textContent === "Copy failed") {
-                        status.textContent = "";
-                    }
+                    if (status.textContent === "Copy failed") status.textContent = "";
                 }, 1500);
             }
         }
@@ -305,11 +264,11 @@ HTML = """
                                     </div>
 
                                     <div class="transcript-text">
-                                        <pre class="transcript">${transcriptEscaped}</pre>
+                                        ${highlightedTranscript(note)}
                                     </div>
                                 </div>
 
-                                <textarea id="transcript-${id}" class="sr-only">${transcript}</textarea>
+                                <textarea id="transcript-${id}" class="sr-only">${transcriptEscaped}</textarea>
 
                                 ${audioFilename ? `
                                     <div class="audio-row">
@@ -341,6 +300,7 @@ HTML = """
                             <div><b>Processing Time:</b> ${processingTime} sec</div>
                             <div><b>Language:</b> ${language}</div>
                             <div><b>JSON File:</b> ${jsonFile}</div>
+                            <div><b>Word Highlighting:</b> yellow = medium confidence, red = low confidence</div>
                         </div>
 
                         <div class="deep-dive" id="deep-panel-${id}" style="display:${deepOpen ? "block" : "none"};">
